@@ -1,7 +1,7 @@
 package corda.base.api
 
 import corda.base.flow.ExampleFlow.Initiator
-import corda.base.state.IOUState
+import corda.base.state.MessageState
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startTrackedFlow
@@ -49,13 +49,6 @@ class ExampleApi(private val rpcOps: CordaRPCOps) {
                 .filter { it.organisation !in (SERVICE_NAMES + myLegalName.organisation) })
     }
 
-    /**
-     * Displays all IOU states that exist in the node's vault.
-     */
-    /* @GET
-    @Path("ious")
-    @Produces(MediaType.APPLICATION_JSON)
-    fun getIOUs() = rpcOps.vaultQueryBy<IOUState>().states */
 
     /**
      * Display corda node info.
@@ -86,7 +79,7 @@ class ExampleApi(private val rpcOps: CordaRPCOps) {
     @GET
     @Path("dbstatus")
     @Produces(MediaType.APPLICATION_JSON)
-    fun getDBStatus() = rpcOps.vaultQueryBy<IOUState>().states
+    fun getDBStatus() = rpcOps.vaultQueryBy<MessageState>().states
 
     /**
      * Displays all registered flows that exist in the node's.

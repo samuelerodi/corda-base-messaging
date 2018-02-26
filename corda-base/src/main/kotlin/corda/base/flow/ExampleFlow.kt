@@ -1,11 +1,11 @@
 package corda.base.flow
 
 import co.paralleluniverse.fibers.Suspendable
-import corda.base.contract.IOUContract
-import corda.base.contract.IOUContract.Companion.IOU_CONTRACT_ID
+import corda.base.contract.MessageContract
+import corda.base.contract.MessageContract.Companion.MESSAGE_CONTRACT_ID
 import corda.base.flow.ExampleFlow.Acceptor
 import corda.base.flow.ExampleFlow.Initiator
-import corda.base.state.IOUState
+import corda.base.state.MessageState
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.StateAndContract
 import net.corda.core.contracts.requireThat
@@ -31,8 +31,8 @@ import net.corda.core.utilities.ProgressTracker.Step
 object ExampleFlow {
     @InitiatingFlow
     @StartableByRPC
-    class Initiator(val iouValue: Int,
-                    val otherParty: Party) : FlowLogic<SignedTransaction>() {
+    class Initiator(val message: String,
+                    val parties: List<Party>) : FlowLogic<SignedTransaction>() {
         /**
          * The progress tracker checkpoints each stage of the flow and outputs the specified messages when each
          * checkpoint is reached in the code. See the 'progressTracker.currentStep' expressions within the call() function.
@@ -66,14 +66,14 @@ object ExampleFlow {
         @Suspendable
         override fun call(): SignedTransaction {
             // Obtain a reference to the notary we want to use.
-            val notary = serviceHub.networkMapCache.notaryIdentities[0]
+            val notary = serviceHub.networkMapCache.notaryIdentities.first()
 
             // Stage 1.
             progressTracker.currentStep = GENERATING_TRANSACTION
             // Generate an unsigned transaction.
-            val iouState = IOUState(iouValue, serviceHub.myInfo.legalIdentities.first(), otherParty)
-            val txCommand = Command(IOUContract.Commands.Create(), iouState.participants.map { it.owningKey })
-            val txBuilder = TransactionBuilder(notary).withItems(StateAndContract(iouState, IOU_CONTRACT_ID), txCommand)
+            val messageState = MessageState(message, parties)
+            val txCommand = Command(MessageContract.Commands.Create(), messageState.participants.map { it.owningKey })
+            val txBuilder = TransactionBuilder(notary).withItems(StateAndContract(messageState, MESSAGE_CONTRACT_ID), txCommand)
 
             // Stage 2.
             progressTracker.currentStep = VERIFYING_TRANSACTION
@@ -86,7 +86,7 @@ object ExampleFlow {
             val partSignedTx = serviceHub.signInitialTransaction(txBuilder)
 
             // Stage 4.
-            val otherPartyFlow = initiateFlow(otherParty)
+            val otherPartyFlow = initiateFlow(parties.first())
             progressTracker.currentStep = GATHERING_SIGS
             // Send the state to the counterparty, and receive it back with their signature.
             val fullySignedTx = subFlow(CollectSignaturesFlow(partSignedTx, setOf(otherPartyFlow), GATHERING_SIGS.childProgressTracker()))
@@ -105,9 +105,7 @@ object ExampleFlow {
             val signTransactionFlow = object : SignTransactionFlow(otherPartyFlow) {
                 override fun checkTransaction(stx: SignedTransaction) = requireThat {
                     val output = stx.tx.outputs.single().data
-                    "This must be an IOU transaction." using (output is IOUState)
-                    val iou = output as IOUState
-                    "I won't accept IOUs with a value over 100." using (iou.value <= 100)
+                    "This must be a Message transaction." using (output is MessageState)
                 }
             }
 

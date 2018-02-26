@@ -1,6 +1,6 @@
 package corda.base.state
 
-import corda.base.schema.IOUSchemaV1
+import corda.base.schema.MessageSchemaV1
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.LinearState
 import net.corda.core.contracts.UniqueIdentifier
@@ -15,29 +15,26 @@ import net.corda.core.schemas.QueryableState
  *
  * A state must implement [ContractState] or one of its descendants.
  *
- * @param value the value of the IOU.
- * @param lender the party issuing the IOU.
- * @param borrower the party receiving and approving the IOU.
+ * @param message the message that each party will sign.
+ * @param parties the party receiving and approving the message.
  */
-data class IOUState(val value: Int,
-                    val lender: Party,
-                    val borrower: Party,
+data class MessageState(val message: String,
+                    val parties: List<Party>,
                     override val linearId: UniqueIdentifier = UniqueIdentifier()):
         LinearState, QueryableState {
     /** The public keys of the involved parties. */
-    override val participants: List<AbstractParty> get() = listOf(lender, borrower)
+    override val participants: List<AbstractParty> get() = parties
 
     override fun generateMappedObject(schema: MappedSchema): PersistentState {
         return when (schema) {
-            is IOUSchemaV1 -> IOUSchemaV1.PersistentIOU(
-                    this.lender.name.toString(),
-                    this.borrower.name.toString(),
-                    this.value,
+            is MessageSchemaV1 -> MessageSchemaV1.PersistentMessage(
+                    this.parties.map { it.name.toString() },
+                    this.message,
                     this.linearId.id
             )
             else -> throw IllegalArgumentException("Unrecognised schema $schema")
         }
     }
 
-    override fun supportedSchemas(): Iterable<MappedSchema> = listOf(IOUSchemaV1)
+    override fun supportedSchemas(): Iterable<MappedSchema> = listOf(MessageSchemaV1)
 }

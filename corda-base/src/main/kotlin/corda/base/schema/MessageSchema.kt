@@ -1,40 +1,40 @@
 package corda.base.schema
 
+
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import java.util.*
 import javax.persistence.Column
 import javax.persistence.Entity
+import javax.persistence.OneToMany
 import javax.persistence.Table
 
 /**
  * The family of schemas for IOUState.
  */
-object IOUSchema
+object MessageSchema
 
 /**
  * An IOUState schema.
  */
-object IOUSchemaV1 : MappedSchema(
-        schemaFamily = IOUSchema.javaClass,
+object MessageSchemaV1 : MappedSchema(
+        schemaFamily = MessageSchema.javaClass,
         version = 1,
-        mappedTypes = listOf(PersistentIOU::class.java)) {
+        mappedTypes = listOf(PersistentMessage::class.java)) {
     @Entity
-    @Table(name = "iou_states")
-    class PersistentIOU(
-            @Column(name = "lender")
-            var lenderName: String,
+    @Table(name = "message_states")
+    class PersistentMessage(
+            @Column(name = "parties")
+            @OneToMany
+            var parties: List<String>,
 
-            @Column(name = "borrower")
-            var borrowerName: String,
-
-            @Column(name = "value")
-            var value: Int,
+            @Column(name = "message")
+            var message: String,
 
             @Column(name = "linear_id")
             var linearId: UUID
     ) : PersistentState() {
         // Default constructor required by hibernate.
-        constructor(): this("", "", 0, UUID.randomUUID())
+    constructor(): this(listOf(""), "",  UUID.randomUUID())
     }
 }
