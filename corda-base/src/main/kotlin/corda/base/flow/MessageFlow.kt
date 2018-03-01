@@ -3,8 +3,8 @@ package corda.base.flow
 import co.paralleluniverse.fibers.Suspendable
 import corda.base.contract.MessageContract
 import corda.base.contract.MessageContract.Companion.MESSAGE_CONTRACT_ID
-import corda.base.flow.ExampleFlow.Acceptor
-import corda.base.flow.ExampleFlow.Initiator
+import corda.base.flow.MessageFlow.Acceptor
+import corda.base.flow.MessageFlow.Initiator
 import corda.base.state.MessageState
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.StateAndContract
@@ -28,11 +28,11 @@ import net.corda.core.utilities.ProgressTracker.Step
  *
  * All methods called within the [FlowLogic] sub-class need to be annotated with the @Suspendable annotation.
  */
-object ExampleFlow {
+object MessageFlow {
     @InitiatingFlow
     @StartableByRPC
     class Initiator(val message: String,
-                    val parties: List<Party>) : FlowLogic<SignedTransaction>() {
+                    val parties: MutableList<Party> = mutableListOf()) : FlowLogic<SignedTransaction>() {
         /**
          * The progress tracker checkpoints each stage of the flow and outputs the specified messages when each
          * checkpoint is reached in the code. See the 'progressTracker.currentStep' expressions within the call() function.
@@ -67,11 +67,16 @@ object ExampleFlow {
         override fun call(): SignedTransaction {
             // Obtain a reference to the notary we want to use.
             val notary = serviceHub.networkMapCache.notaryIdentities.first()
+            if (parties.isEmpty()){
+                val partyList =  serviceHub.networkMapCache.allNodes.map { it.legalIdentities.first()}
+                        .filter { it.name.toString() != serviceHub.myInfo.legalIdentities.first().name.toString()}
+                parties.addAll(partyList.toSet())
+            }
 
             // Stage 1.
             progressTracker.currentStep = GENERATING_TRANSACTION
             // Generate an unsigned transaction.
-            val messageState = MessageState(message, parties)
+            val messageState = MessageState(message,serviceHub.myInfo.legalIdentities.first() ,parties)
             val txCommand = Command(MessageContract.Commands.Create(), messageState.participants.map { it.owningKey })
             val txBuilder = TransactionBuilder(notary).withItems(StateAndContract(messageState, MESSAGE_CONTRACT_ID), txCommand)
 
@@ -85,11 +90,13 @@ object ExampleFlow {
             // Sign the transaction.
             val partSignedTx = serviceHub.signInitialTransaction(txBuilder)
 
-            // Stage 4.
-            val otherPartyFlow = initiateFlow(parties.first())
+
+            val partiesSessions = parties.map{initiateFlow(it)}
+            // Stage 4. Send to all parties
+
             progressTracker.currentStep = GATHERING_SIGS
             // Send the state to the counterparty, and receive it back with their signature.
-            val fullySignedTx = subFlow(CollectSignaturesFlow(partSignedTx, setOf(otherPartyFlow), GATHERING_SIGS.childProgressTracker()))
+            val fullySignedTx = subFlow(CollectSignaturesFlow(partSignedTx, partiesSessions.toSet(), GATHERING_SIGS.childProgressTracker()))
 
             // Stage 5.
             progressTracker.currentStep = FINALISING_TRANSACTION

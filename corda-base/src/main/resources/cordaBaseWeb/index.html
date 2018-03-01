@@ -48,17 +48,18 @@ COMING WEEKS WE'LL WRITE A TUTORIAL ON HOW BEST TO DO THIS.
                 <label for="counterparty" class="control-label">Counter-party:</label>
                 <select ng-model="modalInstance.form.counterparty" class="form-control" id="counterparty"
                         ng-options="peer as peer for peer in modalInstance.peers">
+                    <option value="" >BROADCAST</option>
                 </select>
             </div>
             <div class="form-group">
-                <label for="value" class="control-label">Value (Int):</label>
-                <input type="text" ng-model="modalInstance.form.value" class="form-control" id="value">
+                <label for="message" class="control-label">Message (String):</label>
+                <input type="text" ng-model="modalInstance.form.message" class="form-control" id="message">
             </div>
             <div ng-show="modalInstance.formError" class="form-group">
                 <div class="alert alert-danger" role="alert">
                     <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
                     <span class="sr-only">Error:</span>
-                    Enter valid IOU parameters
+                    Enter valid Message parameters
                 </div>
             </div>
         </div>
@@ -91,9 +92,9 @@ COMING WEEKS WE'LL WRITE A TUTORIAL ON HOW BEST TO DO THIS.
         <div ng-repeat="iou in demoApp.ious" class="panel panel-default">
             <div class="panel-body">
                 <ul>
-                    <li>Lender: {{iou.lender}}</li>
-                    <li>Borrower: {{iou.borrower}}</li>
-                    <li>Value: {{iou.value}}</li>
+                    <li>Message: {{iou.message}}</li>
+                    <li>Issuer: {{iou.issuer}}</li>
+                    <li>Parties: {{iou.parties}}</li>
                 </ul>
             </div>
         </div>

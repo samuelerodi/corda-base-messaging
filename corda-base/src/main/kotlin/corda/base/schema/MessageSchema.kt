@@ -25,8 +25,10 @@ object MessageSchemaV1 : MappedSchema(
     @Table(name = "message_states")
     class PersistentMessage(
             @Column(name = "parties")
-            @OneToMany
-            var parties: List<String>,
+            var parties: String,
+
+            @Column(name = "issuer")
+            var issuer: String,
 
             @Column(name = "message")
             var message: String,
@@ -35,6 +37,6 @@ object MessageSchemaV1 : MappedSchema(
             var linearId: UUID
     ) : PersistentState() {
         // Default constructor required by hibernate.
-    constructor(): this(listOf(""), "",  UUID.randomUUID())
+    constructor(): this("", "", "",  UUID.randomUUID())
     }
 }

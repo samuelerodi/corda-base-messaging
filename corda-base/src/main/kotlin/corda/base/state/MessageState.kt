@@ -19,16 +19,18 @@ import net.corda.core.schemas.QueryableState
  * @param parties the party receiving and approving the message.
  */
 data class MessageState(val message: String,
-                    val parties: List<Party>,
-                    override val linearId: UniqueIdentifier = UniqueIdentifier()):
+                        val issuer: Party,
+                        val parties: List<Party>,
+                        override val linearId: UniqueIdentifier = UniqueIdentifier()):
         LinearState, QueryableState {
     /** The public keys of the involved parties. */
-    override val participants: List<AbstractParty> get() = parties
+    override val participants: List<AbstractParty> get() = parties + listOf(issuer)
 
     override fun generateMappedObject(schema: MappedSchema): PersistentState {
         return when (schema) {
             is MessageSchemaV1 -> MessageSchemaV1.PersistentMessage(
-                    this.parties.map { it.name.toString() },
+                    this.parties.map { it.name.toString() }.toString(),
+                    this.issuer.toString(),
                     this.message,
                     this.linearId.id
             )

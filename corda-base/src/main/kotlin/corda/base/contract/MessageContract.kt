@@ -36,7 +36,7 @@ open class MessageContract : Contract {
             "No inputs should be consumed when issuing an IOU." using (tx.inputs.isEmpty())
             "Only one output state should be created." using (tx.outputs.size == 1)
             val out = tx.outputsOfType<MessageState>().single()
-            "Cannot send twice to the same recipient." using (out.parties.size == setOf(out.parties).size)
+            "Cannot send twice to the same recipient: " + out.parties.toString()  using (out.parties.size == out.parties.toSet().size)
             "All of the participants must be signers." using (command.signers.containsAll(out.participants.map { it.owningKey }))
 
         }

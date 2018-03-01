@@ -1,8 +1,10 @@
 package corda.base.api
 
-import corda.base.flow.ExampleFlow.Initiator
+import corda.base.flow.MessageFlow
+import corda.base.flow.MessageFlow.Initiator
 import corda.base.state.MessageState
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startTrackedFlow
 import net.corda.core.messaging.vaultQueryBy
@@ -19,11 +21,11 @@ val SERVICE_NAMES = listOf("Controller", "Network Map Service")
 
 // This API is accessible from /api/example. All paths specified below are relative to it.
 @Path("corda")
-class ExampleApi(private val rpcOps: CordaRPCOps) {
+class BaseApi(private val rpcOps: CordaRPCOps) {
     private val myLegalName: CordaX500Name = rpcOps.nodeInfo().legalIdentities.first().name
 
     companion object {
-        private val logger: Logger = loggerFor<ExampleApi>()
+        private val logger: Logger = loggerFor<BaseApi>()
     }
 
     /**
@@ -82,11 +84,53 @@ class ExampleApi(private val rpcOps: CordaRPCOps) {
     fun getDBStatus() = rpcOps.vaultQueryBy<MessageState>().states
 
     /**
+     * Displays all states that exist in the node's vault.
+     */
+    @GET
+    @Path("message")
+    @Produces(MediaType.APPLICATION_JSON)
+    fun getMessage() = rpcOps.vaultQueryBy<MessageState>().states
+
+    /**
      * Displays all registered flows that exist in the node's.
      */
     @GET
     @Path("flows")
     @Produces(MediaType.APPLICATION_JSON)
     fun getRegisteredFlows() = mapOf("flows" to rpcOps.registeredFlows())
+
+    /**
+     * Displays all registered flows that exist in the node's.
+     */
+    @PUT
+    @Path("message")
+    fun sendMessage(@QueryParam(value = "message") message: String,
+                    @QueryParam(value = "parties") partyList: List<String>): Response {
+        // Get party objects for myself and the counterparty.
+        val parties  : MutableList<Party> = mutableListOf()
+        try {
+            if (partyList.isNotEmpty()){
+                val temp = partyList
+                        .map{rpcOps.wellKnownPartyFromX500Name(CordaX500Name.parse(it)) ?: throw IllegalArgumentException("Unknown party name.")}
+                parties.addAll(temp)
+            }
+            if (message == null || message == "") throw IllegalArgumentException("Message not specified.")
+
+            // Start the MessageFlow. We block and waits for the flow to return.
+            val result = rpcOps.startTrackedFlow(::Initiator, message, parties).returnValue.get()
+            // Return the response.
+            return Response
+                    .status(Response.Status.CREATED)
+                    .entity("Transaction id ${result.id} committed to ledger.\n${result.tx.outputs.single()}")
+                    .build()
+        }
+        catch (e: Exception) {
+            return Response
+                    .status(Response.Status.BAD_REQUEST)
+                    .entity(e.message)
+                    .build()
+        }
+
+    }
 
 }

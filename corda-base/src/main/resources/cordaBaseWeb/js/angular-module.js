@@ -27,7 +27,7 @@ app.controller('DemoAppController', function($http, $location, $uibModal) {
     const demoApp = this;
 
     // We identify the node.
-    const apiBaseURL = "/api/example/";
+    const apiBaseURL = "/api/corda/";
     let peers = [];
 
     $http.get(apiBaseURL + "me").then((response) => demoApp.thisNode = response.data.me);
@@ -49,7 +49,7 @@ app.controller('DemoAppController', function($http, $location, $uibModal) {
         modalInstance.result.then(() => {}, () => {});
     };
 
-    demoApp.getIOUs = () => $http.get(apiBaseURL + "ious")
+    demoApp.getIOUs = () => $http.get(apiBaseURL + "message")
         .then((response) => demoApp.ious = Object.keys(response.data)
             .map((key) => response.data[key].state.data)
             .reverse());
@@ -72,9 +72,8 @@ app.controller('ModalInstanceCtrl', function ($http, $location, $uibModalInstanc
             modalInstance.formError = false;
 
             $uibModalInstance.close();
-
-            const createIOUEndpoint = `${apiBaseURL}create-iou?partyName=${modalInstance.form.counterparty}&iouValue=${modalInstance.form.value}`;
-
+            var createIOUEndpoint = `${apiBaseURL}message?message=${modalInstance.form.message}`;
+            if (modalInstance.form.counterparty) createIOUEndpoint += '&parties=' [modalInstance.form.counterparty];
             // Create PO and handle success / fail responses.
             $http.put(createIOUEndpoint).then(
                 (result) => {
@@ -105,7 +104,7 @@ app.controller('ModalInstanceCtrl', function ($http, $location, $uibModalInstanc
 
     // Validate the IOU.
     function invalidFormInput() {
-        return isNaN(modalInstance.form.value) || (modalInstance.form.counterparty === undefined);
+        return !modalInstance.form.message;
     }
 });
 
