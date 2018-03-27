@@ -20,7 +20,7 @@ import javax.ws.rs.core.Response.Status.CREATED
 val SERVICE_NAMES = listOf("Controller", "Network Map Service")
 
 // This API is accessible from /api/example. All paths specified below are relative to it.
-@Path("corda")
+@Path("node")
 class BaseApi(private val rpcOps: CordaRPCOps) {
     private val myLegalName: CordaX500Name = rpcOps.nodeInfo().legalIdentities.first().name
 
@@ -56,7 +56,7 @@ class BaseApi(private val rpcOps: CordaRPCOps) {
      * Display corda node info.
      */
     @GET
-    @Path("nodeInfo")
+    @Path("info")
     @Produces(MediaType.APPLICATION_JSON)
     fun getNodeInfo() = mapOf(
             "legalIdentities" to rpcOps.nodeInfo().legalIdentities.map{ it.name },

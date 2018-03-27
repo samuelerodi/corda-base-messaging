@@ -33,10 +33,13 @@ object MessageSchemaV1 : MappedSchema(
             @Column(name = "message")
             var message: String,
 
+            @Column(name = "consumer")
+            var consumer: String?,
+
             @Column(name = "linear_id")
             var linearId: UUID
     ) : PersistentState() {
         // Default constructor required by hibernate.
-    constructor(): this("", "", "",  UUID.randomUUID())
+    constructor(): this("", "", "", "",  UUID.randomUUID())
     }
 }

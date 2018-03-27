@@ -22,7 +22,10 @@ data class MessageState(val message: String,
                         val issuer: Party,
                         val parties: List<Party>,
                         override val linearId: UniqueIdentifier = UniqueIdentifier()):
-        LinearState, QueryableState {
+    LinearState, QueryableState {
+
+    var consumer: Party?=null;
+
     /** The public keys of the involved parties. */
     override val participants: List<AbstractParty> get() = parties + listOf(issuer)
 
@@ -32,11 +35,12 @@ data class MessageState(val message: String,
                     this.parties.map { it.name.toString() }.toString(),
                     this.issuer.toString(),
                     this.message,
+                    this.consumer?.toString(),
                     this.linearId.id
             )
             else -> throw IllegalArgumentException("Unrecognised schema $schema")
         }
     }
-
     override fun supportedSchemas(): Iterable<MappedSchema> = listOf(MessageSchemaV1)
+    public fun burn(consumer: Party):MessageState {var cp=copy(); cp.consumer=consumer; return cp} 
 }
