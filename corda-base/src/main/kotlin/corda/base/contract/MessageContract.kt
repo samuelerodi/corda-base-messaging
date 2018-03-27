@@ -1,6 +1,7 @@
 package corda.base.contract
 
 import corda.base.state.MessageState
+import net.corda.core.contracts.TypeOnlyCommandData
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.requireSingleCommand
@@ -30,15 +31,29 @@ open class MessageContract : Contract {
      * considered valid.
      */
     override fun verify(tx: LedgerTransaction) {
-        val command = tx.commands.requireSingleCommand<Commands.Create>()
-        requireThat {
+        val command = tx.commands.requireSingleCommand<MessageContract.Commands>()
+        when (command.value) {
+            is Commands.Create -> requireThat {
             // Generic constraints around the IOU transaction.
-            "No inputs should be consumed when issuing an IOU." using (tx.inputs.isEmpty())
+            "No inputs should be consumed when issuing a Message." using (tx.inputs.isEmpty())
             "Only one output state should be created." using (tx.outputs.size == 1)
-            val out = tx.outputsOfType<MessageState>().single()
-            "Cannot send twice to the same recipient: " + out.parties.toString()  using (out.parties.size == out.parties.toSet().size)
-            "All of the participants must be signers." using (command.signers.containsAll(out.participants.map { it.owningKey }))
-
+            val output = tx.outputsOfType<MessageState>().single()
+            "Cannot send twice to the same recipient: " + output.parties.toString()  using (output.parties.size == output.parties.toSet().size)
+            "All of the participants must be signers." using (command.signers.containsAll(output.participants.map { it.owningKey }))
+          }
+          is Commands.Spend -> requireThat {
+            // Generic constraints around the IOU transaction.
+            "One input only should be consumed when burning a Message." using (tx.inputs.size == 1)
+            "Only one output state should be created." using (tx.outputs.size == 1)
+            val input = tx.inputsOfType<MessageState>().single()
+            "Cannot burn an already burnt message" using (input.consumer == null)
+            val output = tx.outputsOfType<MessageState>().single()
+            "Consumer is required" using (output.consumer != null)
+            "Issuer can't be modified" using (output.issuer == input.issuer)
+            "Parties must not be changed" using (output.parties == input.parties)
+            "Message can't be modified" using (output.message == input.message)
+            /* "All of the participants must be signers." using (command.signers.containsAll(out.participants.map { it.owningKey })) */
+        }
         }
     }
 
@@ -46,6 +61,7 @@ open class MessageContract : Contract {
      * This contract only implements one command, Create.
      */
     interface Commands : CommandData {
-        class Create : Commands
+        class Create : TypeOnlyCommandData(), Commands
+        class Spend : TypeOnlyCommandData(), Commands
     }
 }
